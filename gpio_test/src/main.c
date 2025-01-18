@@ -49,12 +49,12 @@ bl652 | bl54l15
 
 18    | 2.00
 16    | 2.01
-20    | 2.02
+//20    | 2.02 (under board)
 11    | 2.03
 14    | 2.04
 12    | 2.05
 25    | 2.06
-22    | 2.07
+//22    | 2.07 (under board)
 23    | 2.08
 24    | 2.09
 26    | 2.10
@@ -228,7 +228,39 @@ int main(void)
 	return 0;
 }
 
-static int app_next(const struct shell *sh, size_t argc, char **argv)
+static void configure_gpio(const struct shell *sh, uint8_t next_port)
+{
+	int rc;
+
+	if (last_port < ARRAY_SIZE(gpio_ports)) {
+		rc = gpio_pin_configure(gpio_ports[last_port].device, gpio_ports[last_port].pin, GPIO_INPUT);
+
+		if (rc) {
+			shell_error(sh, "GPIO configuration failed (%s): %d", gpio_ports[last_port].name, rc);
+		}
+	}
+
+	rc = gpio_pin_configure(gpio_ports[next_port].device, gpio_ports[next_port].pin, (GPIO_OUTPUT | GPIO_OUTPUT_INIT_HIGH));
+
+	if (rc) {
+		shell_error(sh, "GPIO configuration failed (%s): %d", gpio_ports[next_port].name, rc);
+	}
+
+	last_port = next_port;
+}
+
+static int app_current_handler(const struct shell *sh, size_t argc, char **argv)
+{
+	if (last_port == ARRAY_SIZE(gpio_ports)) {
+		shell_print(sh, "Inactive");
+	} else {
+		shell_print(sh, "Current GPIO under test: %s", gpio_ports[last_port].name);
+	}
+
+	return 0;
+}
+
+static int app_next_handler(const struct shell *sh, size_t argc, char **argv)
 {
 	uint8_t next_port;
 
@@ -238,11 +270,11 @@ static int app_next(const struct shell *sh, size_t argc, char **argv)
 		next_port = last_port + 1;
 	}
 
-//todo
-	return 0;
+	configure_gpio(sh, next_port);
+	return app_current_handler(sh, argc, argv);
 }
 
-static int app_previous(const struct shell *sh, size_t argc, char **argv)
+static int app_previous_handler(const struct shell *sh, size_t argc, char **argv)
 {
 	uint8_t next_port;
 
@@ -252,27 +284,17 @@ static int app_previous(const struct shell *sh, size_t argc, char **argv)
 		next_port = last_port - 1;
 	}
 
-//todo
-	return 0;
+	configure_gpio(sh, next_port);
+	return app_current_handler(sh, argc, argv);
 }
 
-static int app_current(const struct shell *sh, size_t argc, char **argv)
-{
-	if (last_port == ARRAY_SIZE(gpio_ports)) {
-		shell_print(sh, "Inactive");
-	} else {
-		shell_print(sh, "Current GPIO under test: %s", gpio_ports[last_port].name);
-	}
-	return 0;
-}
-
-static int app_version(const struct shell *sh, size_t argc, char **argv)
+static int app_version_handler(const struct shell *sh, size_t argc, char **argv)
 {
 	shell_print(sh, "Version: %s", APP_VERSION_TWEAK_STRING);
 	return 0;
 }
 
-static int app_reboot(const struct shell *sh, size_t argc, char **argv)
+static int app_reboot_handler(const struct shell *sh, size_t argc, char **argv)
 {
         sys_reboot(SYS_REBOOT_COLD);
 	return 0;
