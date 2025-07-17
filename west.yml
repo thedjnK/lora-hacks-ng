@@ -2,22 +2,29 @@ manifest:
   remotes:
     - name: zephyr
       url-base: https://github.com/zephyrproject-rtos
+    - name: nrfconnect
+      url-base: https://github.com/nrfconnect
     - name: thedjnK
       url-base: https://github.com/thedjnK
 
   projects:
-    - name: zephyr
-      remote: zephyr
+    - name: sdk-nrf
+      remote: nrfconnect
       revision: main
       import:
         name-allowlist:
           - cmsis
+          - cmsis_6
           - hal_nordic
           - loramac-node
+          - mbedtls
           - mcuboot
+          - nrfxlib
+          - oberon-psa-crypto
           - picolibc
           - tinycrypt
           - zcbor
+          - zephyr
     - name: boards
       remote: thedjnK
       revision: main
