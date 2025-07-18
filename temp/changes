@@ -1,0 +1,194 @@
+diff --git a/boards/nordic/nrf54l15dk/nrf54l15dk_nrf54l15_cpuflpr.dts b/boards/nordic/nrf54l15dk/nrf54l15dk_nrf54l15_cpuflpr.dts
+index 2bc4ba292be..39e0d46e538 100644
+--- a/boards/nordic/nrf54l15dk/nrf54l15dk_nrf54l15_cpuflpr.dts
++++ b/boards/nordic/nrf54l15dk/nrf54l15dk_nrf54l15_cpuflpr.dts
+@@ -7,6 +7,7 @@
+ /dts-v1/;
+ #include <nordic/nrf54l15_cpuflpr.dtsi>
+ #include "nrf54l15dk_common.dtsi"
++#include <zephyr/dt-bindings/lora/sx126x.h>
+ 
+ / {
+ 	model = "Nordic nRF54L15 DK nRF54L15 FLPR MCU";
+@@ -19,6 +20,10 @@
+ 		zephyr,flash = &cpuflpr_rram;
+ 		zephyr,sram = &cpuflpr_sram;
+ 	};
++
++        aliases {
++                lora0 = &lora_semtech_sx1262mb2das;
++        };
+ };
+ 
+ &cpuflpr_sram {
+@@ -50,6 +55,63 @@
+ 	status = "okay";
+ };
+ 
++&spi00 {
++        status = "okay";
++        cs-gpios = /*<&gpio2 5 GPIO_ACTIVE_LOW>,*/ <&gpio2 6 GPIO_ACTIVE_LOW>;
++        pinctrl-0 = <&spi00_default>;
++        pinctrl-1 = <&spi00_sleep>;
++        pinctrl-names = "default", "sleep";
++
++/*
++        mx25r64: mx25r6435f@0 {
++                compatible = "jedec,spi-nor";
++                status = "okay";
++                reg = <0>;
++                spi-max-frequency = <8000000>;
++                jedec-id = [c2 28 17];
++                sfdp-bfp = [
++                        e5 20 f1 ff  ff ff ff 03  44 eb 08 6b  08 3b 04 bb
++                        ee ff ff ff  ff ff 00 ff  ff ff 00 ff  0c 20 0f 52
++                        10 d8 00 ff  23 72 f5 00  82 ed 04 cc  44 83 48 44
++                        30 b0 30 b0  f7 c4 d5 5c  00 be 29 ff  f0 d0 ff ff
++                ];
++                size = <67108864>;
++                has-dpd;
++                t-enter-dpd = <10000>;
++                t-exit-dpd = <35000>;
++        };
++*/
++
++        lora_semtech_sx1262mb2das: sx1262@0 {
++                compatible = "semtech,sx1262";
++                reg = <0>;
++                spi-max-frequency = <DT_FREQ_M(8)>;
++                label = "SX1262";
++                reset-gpios = <&gpio1 8 GPIO_ACTIVE_LOW>;
++                busy-gpios = <&gpio2 8 GPIO_ACTIVE_HIGH>;
++                dio1-gpios = <&gpio1 10 GPIO_ACTIVE_HIGH>;
++                dio2-tx-enable;
++                dio3-tcxo-voltage = <SX126X_DIO3_TCXO_1V7>;
++                rx-enable-gpios = <&gpio2 10 GPIO_ACTIVE_HIGH>;
++/*                tx-enable-gpios = <&gpio1 12 GPIO_ACTIVE_HIGH>;*/
++                tcxo-power-startup-delay-ms = <6>;
++        };
++
++/*        lora_semtech_sx1262mb2das: sx1262@1 {
++                compatible = "semtech,sx1262";
++                reg = <1>;
++                spi-max-frequency = <DT_FREQ_M(8)>;
++                label = "SX1262";
++                reset-gpios = <&gpio1 8 GPIO_ACTIVE_LOW>;
++                busy-gpios = <&gpio2 8 GPIO_ACTIVE_HIGH>;
++                dio1-gpios = <&gpio1 10 GPIO_ACTIVE_HIGH>;
++                dio2-tx-enable;
++		dio3-tcxo-voltage = <SX126X_DIO3_TCXO_1V7>;
++                rx-enable-gpios = <&gpio2 10 GPIO_ACTIVE_HIGH>;
++                tcxo-power-startup-delay-ms = <6>;
++        };*/
++};
++
+ &gpio0 {
+ 	status = "okay";
+ };
+@@ -69,3 +131,4 @@
+ &gpiote30 {
+ 	status = "okay";
+ };
++
+diff --git a/boards/nordic/nrf54l15dk/nrf54l15dk_nrf54l_05_10_15-pinctrl.dtsi b/boards/nordic/nrf54l15dk/nrf54l15dk_nrf54l_05_10_15-pinctrl.dtsi
+index 7beece98e62..44bbbf59b33 100644
+--- a/boards/nordic/nrf54l15dk/nrf54l15dk_nrf54l_05_10_15-pinctrl.dtsi
++++ b/boards/nordic/nrf54l15dk/nrf54l15dk_nrf54l_05_10_15-pinctrl.dtsi
+@@ -67,6 +67,24 @@
+ 		};
+ 	};
+ 
++	/omit-if-no-ref/ spi30_default: spi30_default {
++		group1 {
++/* 5 = cs */
++			psels = <NRF_PSEL(SPIM_SCK, 0, 4)>,
++				<NRF_PSEL(SPIM_MOSI, 0, 3)>,
++				<NRF_PSEL(SPIM_MISO, 0, 2)>;
++		};
++	};
++
++	/omit-if-no-ref/ spi30_sleep: spi30_sleep {
++		group1 {
++			psels = <NRF_PSEL(SPIM_SCK, 0, 4)>,
++				<NRF_PSEL(SPIM_MOSI, 0, 3)>,
++				<NRF_PSEL(SPIM_MISO, 0, 2)>;
++				low-power-enable;
++		};
++	};
++
+ 	/omit-if-no-ref/ pwm20_default: pwm20_default {
+ 		group1 {
+ 			psels = <NRF_PSEL(PWM_OUT0, 1, 10)>;
+diff --git a/boards/nordic/nrf54l15dk/nrf54l_05_10_15_cpuapp_common.dtsi b/boards/nordic/nrf54l15dk/nrf54l_05_10_15_cpuapp_common.dtsi
+index 6962fc4b087..7e1ee690001 100644
+--- a/boards/nordic/nrf54l15dk/nrf54l_05_10_15_cpuapp_common.dtsi
++++ b/boards/nordic/nrf54l15dk/nrf54l_05_10_15_cpuapp_common.dtsi
+@@ -7,6 +7,7 @@
+ /* This file is common to the secure and non-secure domain */
+ 
+ #include "nrf54l15dk_common.dtsi"
++#include <zephyr/dt-bindings/lora/sx126x.h>
+ 
+ / {
+ 	chosen {
+@@ -20,6 +21,10 @@
+ 		zephyr,ieee802154 = &ieee802154;
+ 		zephyr,boot-mode = &boot_mode0;
+ 	};
++
++        aliases {
++                lora0 = &lora_semtech_sx1262mb2das;
++        };
+ };
+ 
+ &cpuapp_sram {
+@@ -108,11 +113,13 @@
+ 
+ &spi00 {
+ 	status = "okay";
+-	cs-gpios = <&gpio2 5 GPIO_ACTIVE_LOW>;
++/*        cs-gpios = <&gpio2 5 GPIO_ACTIVE_LOW>, <&gpio2 6 GPIO_ACTIVE_LOW>;*/
++        cs-gpios = <&gpio2 6 GPIO_ACTIVE_LOW>;
+ 	pinctrl-0 = <&spi00_default>;
+ 	pinctrl-1 = <&spi00_sleep>;
+ 	pinctrl-names = "default", "sleep";
+ 
++/*
+ 	mx25r64: mx25r6435f@0 {
+ 		compatible = "jedec,spi-nor";
+ 		status = "okay";
+@@ -130,6 +137,22 @@
+ 		t-enter-dpd = <10000>;
+ 		t-exit-dpd = <35000>;
+ 	};
++*/
++
++        lora_semtech_sx1262mb2das: sx1262@0 {
++                compatible = "semtech,sx1262";
++                reg = <0>;
++                spi-max-frequency = <DT_FREQ_M(8)>;
++                label = "SX1262";
++                reset-gpios = <&gpio1 8 GPIO_ACTIVE_LOW>;
++                busy-gpios = <&gpio2 8 GPIO_ACTIVE_HIGH>;
++                dio1-gpios = <&gpio1 10 GPIO_ACTIVE_HIGH>;
++/*                dio2-tx-enable;*/
++                dio3-tcxo-voltage = <SX126X_DIO3_TCXO_1V7>;
++                rx-enable-gpios = <&gpio2 10 GPIO_ACTIVE_HIGH>;
++                tx-enable-gpios = <&gpio1 12 GPIO_ACTIVE_HIGH>;
++                tcxo-power-startup-delay-ms = <6>;
++        };
+ };
+ 
+ &adc {
+diff --git a/samples/subsys/lorawan/class_a/prj.conf b/samples/subsys/lorawan/class_a/prj.conf
+index 5421cfcc83c..573fb5b1a6d 100644
+--- a/samples/subsys/lorawan/class_a/prj.conf
++++ b/samples/subsys/lorawan/class_a/prj.conf
+@@ -1,6 +1,6 @@
+ CONFIG_LOG=y
+ CONFIG_LORA=y
+ CONFIG_LORAWAN=y
+-CONFIG_LORAMAC_REGION_IN865=y
++CONFIG_LORAMAC_REGION_EU868=y
+ CONFIG_MAIN_STACK_SIZE=2048
+ CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE=2048
