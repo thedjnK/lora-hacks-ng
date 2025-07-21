@@ -11,7 +11,7 @@ manifest:
     - name: sdk-nrf
       path: nrf
       remote: nrfconnect
-      revision: main
+      revision: d3c1da02e942ebc1b105ce7027b468351ec47185
       import:
         name-allowlist:
           - cmsis
@@ -26,6 +26,7 @@ manifest:
           - tinycrypt
           - zcbor
           - zephyr
+          - segger
     - name: boards
       remote: thedjnK
       revision: main
