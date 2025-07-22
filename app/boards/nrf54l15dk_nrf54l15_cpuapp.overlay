@@ -10,24 +10,22 @@
 			#address-cells = <1>;
 			#size-cells = <1>;
 
-			sram_rx: memory@20018000 {
-				reg = <0x20018000 0x8000>;
-			};
+                        sram_rx: memory@20018000 {
+                                reg = <0x20018000 0x400>;
+                        };
 
-			sram_tx: memory@20020000 {
-				reg = <0x20020000 0x8000>;
-			};
+                        sram_tx: memory@20018400 {
+                                reg = <0x20018400 0x400>;
+                        };
 		};
 	};
 
 	ipc {
 		ipc0: ipc0 {
-			compatible = "zephyr,ipc-icbmsg";
+			compatible = "zephyr,ipc-icmsg";
 			dcache-alignment = <32>;
 			tx-region = <&sram_tx>;
 			rx-region = <&sram_rx>;
-			tx-blocks = <16>;
-			rx-blocks = <18>;
 			mboxes = <&cpuapp_vevif_rx 20>, <&cpuapp_vevif_tx 21>;
 			mbox-names = "rx", "tx";
 			status = "okay";
