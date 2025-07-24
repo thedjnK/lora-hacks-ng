@@ -1,26 +1,21 @@
 #
-# Copyright (c) 2024 Nordic Semiconductor ASA
+# Copyright (c) 2025, Jamie M.
 #
-# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+# All right reserved. This code is NOT apache or FOSS/copyleft licensed.
 #
 
-#if("${SB_CONFIG_REMOTE_BOARD}" STREQUAL "")
-#  message(FATAL_ERROR "REMOTE_BOARD must be set to a valid board name")
-#endif()
-
-# Add remote project
 ExternalZephyrProject_Add(
   APPLICATION remote
   SOURCE_DIR ${APP_DIR}/remote
-  BOARD nrf54l15dk/nrf54l15/cpuflpr/xip
+  BOARD bl54l15_breakout/nrf54l15/cpuflpr/lora/xip
   BOARD_REVISION ${BOARD_REVISION}
 )
-set_property(GLOBAL APPEND PROPERTY PM_DOMAINS CPUNET)
-set_property(GLOBAL APPEND PROPERTY PM_CPUNET_IMAGES remote)
-set_property(GLOBAL PROPERTY DOMAIN_APP_CPUNET remote)
-set(CPUNET_PM_DOMAIN_DYNAMIC_PARTITION remote CACHE INTERNAL "")
 
-# Add a dependency so that the remote sample will be built and flashed first
+set_property(GLOBAL APPEND PROPERTY PM_DOMAINS CPUFLPR)
+set_property(GLOBAL APPEND PROPERTY PM_CPUFLPR_IMAGES remote)
+set_property(GLOBAL PROPERTY DOMAIN_APP_CPUFLPR remote)
+set(CPUFLPR_PM_DOMAIN_DYNAMIC_PARTITION remote CACHE INTERNAL "")
+
+# Add dependency so that the remote image is built/flashed first
 sysbuild_add_dependencies(CONFIGURE ${DEFAULT_IMAGE} remote)
-# Add dependency so that the remote image is flashed first.
 sysbuild_add_dependencies(FLASH ${DEFAULT_IMAGE} remote)
