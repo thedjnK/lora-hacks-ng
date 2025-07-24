@@ -1,12 +1,12 @@
 #
-# Copyright (c) 2024 Nordic Semiconductor ASA
+# Copyright (c) 2025, Jamie M.
 #
-# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+# All right reserved. This code is NOT apache or FOSS/copyleft licensed.
 #
 
 cmake_minimum_required(VERSION 3.20.0)
 
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
-project(ipc_service_host)
+project(test_app_main)
 
-target_sources(app PRIVATE src/main.c)
+target_sources(app PRIVATE src/main.c src/ipc_endpoint.c)
