@@ -1,0 +1,26 @@
+app:
+  address: 0x0
+  end_address: 0x165000
+  region: flash_primary
+  size: 0x165000
+otp:
+  address: 0xffd500
+  end_address: 0xffd9fc
+  region: otp
+  size: 0x4fc
+sram_primary:
+  address: 0x20000000
+  end_address: 0x2001fc00
+  region: sram_primary
+  size: 0x1fc00
+# Commented out due to partshiton manager, fall back to dts values
+#sram_rx:
+#  address: 0x2003fc00
+#  end_address: 0x20040000
+#  region: sram_primary
+#  size: 0x400
+#sram_tx:
+#  address: 0x2003f800
+#  end_address: 0x2003fc00
+#  region: sram_primary
+#  size: 0x400

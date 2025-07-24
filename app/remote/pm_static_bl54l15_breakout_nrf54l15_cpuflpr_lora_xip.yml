@@ -1,0 +1,35 @@
+app:
+  address: 0x165000
+  end_address: 0x17d000
+  orig_span: &id001
+    - remote
+  region: flash_primary
+  size: 0x18000
+  span: *id001
+# Partshiton manager will completely overwrite this with garbage addresses overwriting the cpuapp
+# area because it's such a piece of shit, luckily the piece of shit output is not used for the
+# remote image, why? Probably some bug in partshiton manager, luckily
+remote:
+  address: 0x165000
+  end_address: 0x17d000
+  region: flash_primary
+  size: 0x18000
+# Partshiton manager will also override this as well... Oh you thought a static PM file meant
+# things were actually static? Wrong. It will also add bootconf, which isn't even accessible or
+# anything to do with the flipper core, great...
+sram_primary:
+  address: 0x2001fc00
+  end_address: 0x2003f800
+  region: sram_primary
+  size: 0x1fc00
+# Commented out due to partshiton manager, fall back to dts values
+#sram_tx:
+#  address: 0x2003fc00
+#  end_address: 0x20040000
+#  region: sram_primary
+#  size: 0x400
+#sram_rx:
+#  address: 0x2003f800
+#  end_address: 0x2003fc00
+#  region: sram_primary
+#  size: 0x400
