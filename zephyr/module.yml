@@ -1,0 +1,5 @@
+build:
+  sysbuild-cmake: sysbuild
+  sysbuild-kconfig: sysbuild/Kconfig.sysbuild
+  depends:
+    - nrf

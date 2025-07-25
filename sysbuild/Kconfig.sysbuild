@@ -1,0 +1,10 @@
+#
+# Copyright (c) 2025, Jamie M.
+#
+# All right reserved. This code is NOT apache or FOSS/copyleft licensed.
+#
+
+config APP_USE_COMBINED_HEX_FILE
+	bool "Use combined hex file"
+	help
+	  Use combined hex file with application and flipper core images in
