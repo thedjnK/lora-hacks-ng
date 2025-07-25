@@ -40,3 +40,5 @@ add_custom_target(
   DEPENDS
     ${CMAKE_BINARY_DIR}/combined.hex
 )
+
+add_dependencies(app remote)

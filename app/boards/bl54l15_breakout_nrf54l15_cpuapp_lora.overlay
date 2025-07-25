@@ -1,0 +1,3 @@
+&cpuflpr_vpr {
+	status = "okay";
+};
