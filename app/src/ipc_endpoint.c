@@ -12,7 +12,7 @@
 
 LOG_MODULE_REGISTER(ipc_endpoint, 4);
 
-#define IPC_MESSAGE_OVERHEAD 3
+#define IPC_MESSAGE_OVERHEAD (data_payload.data - &data_payload.opcode)
 #define IPC_MESSAGE_DATA_SIZE 64
 
 struct ipc_payload {
@@ -48,10 +48,11 @@ static void ipc_endpoint_receive(const void *data, size_t len, void *priv)
 
 	if (len > sizeof(struct ipc_payload)) {
 		printk("invalid len: %d", len);
-	} else if (len != (values->size + 2)) {
-		printk("len mismatch: %d vs %d", len, (values->size + 2));
+	} else if (len != (values->size + IPC_MESSAGE_OVERHEAD)) {
+		printk("len mismatch: %d vs %d", len, (values->size + IPC_MESSAGE_OVERHEAD));
 	} else {
 		printk("got message! %d, %d, %d, %d, %d\n", values->opcode, values->size, values->data[0], values->data[1], values->data[2]);
+LOG_HEXDUMP_ERR(data, len, "DAT");
 	}
 
 	k_sem_give(&ipc_receive_sem);
@@ -95,7 +96,9 @@ int ipc_send_message(uint8_t opcode, uint16_t size, const uint8_t *message)
 
 	data_payload.opcode = opcode;
 	data_payload.size = size;
+LOG_HEXDUMP_ERR(message, size, "out");
 	memcpy(data_payload.data, message, size);
+LOG_HEXDUMP_ERR(&data_payload, (size + IPC_MESSAGE_OVERHEAD), "out2");
 
 	rc = ipc_service_send(&ipc_endpoint, &data_payload, (size + IPC_MESSAGE_OVERHEAD));
 

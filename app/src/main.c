@@ -18,18 +18,21 @@ int main(void)
 	int rc;
 	uint8_t up_value = 0;
 
+LOG_ERR("aa1");
 	rc = ipc_setup();
 
 	if (rc != 0) {
 		return 0;
 	}
 
+LOG_ERR("aa2");
 	rc = ipc_wait_for_ready();
 
 	if (rc != 0) {
 		return 0;
 	}
 
+LOG_ERR("aa3");
 	while (1) {
 		k_sleep(K_MSEC(2000));
 
@@ -37,9 +40,11 @@ int main(void)
 		data[1] = up_value++;
 		data[2] = up_value++;
 
+LOG_HEXDUMP_ERR(data, sizeof(data), "in");
+
 		rc = ipc_send_message(0, sizeof(data), data);
 
-		if (rc != 0) {
+		if (rc < 0) {
 			LOG_ERR("Failed to send: %d", rc);
 		}
 	}
