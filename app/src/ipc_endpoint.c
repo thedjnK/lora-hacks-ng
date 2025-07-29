@@ -9,6 +9,7 @@
 #include <zephyr/device.h>
 #include <zephyr/ipc/ipc_service.h>
 #include <zephyr/logging/log.h>
+#include "ipc_endpoint.h"
 
 LOG_MODULE_REGISTER(ipc_endpoint, 4);
 
@@ -24,6 +25,7 @@ struct ipc_payload {
 static void ipc_endpoint_bound(void *priv);
 static void ipc_endpoint_receive(const void *data, size_t len, void *priv);
 
+static sys_slist_t ipc_registered_handlers = SYS_SLIST_STATIC_INIT(&ipc_registered_handlers);
 static struct ipc_payload data_payload;
 static struct ipc_ept ipc_endpoint;
 static K_SEM_DEFINE(ipc_bound_sem, 0, 1);
@@ -32,7 +34,7 @@ static K_SEM_DEFINE(ipc_receive_sem, 0, 1);
 static struct ipc_ept_cfg ipc_endpoint_config = {
 	.name = "ep0",
 	.cb = {
-		.bound    = ipc_endpoint_bound,
+		.bound = ipc_endpoint_bound,
 		.received = ipc_endpoint_receive,
 	},
 };
@@ -44,6 +46,7 @@ static void ipc_endpoint_bound(void *priv)
 
 static void ipc_endpoint_receive(const void *data, size_t len, void *priv)
 {
+	sys_snode_t *snp, *sns;
 	struct ipc_payload *values = (struct ipc_payload *)data;
 
 	if (len > sizeof(struct ipc_payload)) {
@@ -53,6 +56,15 @@ static void ipc_endpoint_receive(const void *data, size_t len, void *priv)
 	} else {
 		printk("got message! %d, %d, %d, %d, %d\n", values->opcode, values->size, values->data[0], values->data[1], values->data[2]);
 LOG_HEXDUMP_ERR(data, len, "DAT");
+	}
+
+	SYS_SLIST_FOR_EACH_NODE_SAFE(&ipc_registered_handlers, snp, sns) {
+		struct ipc_group *group = CONTAINER_OF(snp, struct ipc_group, node);
+
+		if (group->opcode == values->opcode) {
+			(void)group->callback(&values->data[0], values->size, NULL);
+			break;
+		}
 	}
 
 	k_sem_give(&ipc_receive_sem);
@@ -103,4 +115,14 @@ LOG_HEXDUMP_ERR(&data_payload, (size + IPC_MESSAGE_OVERHEAD), "out2");
 	rc = ipc_service_send(&ipc_endpoint, &data_payload, (size + IPC_MESSAGE_OVERHEAD));
 
 	return rc;
+}
+
+void ipc_register(struct ipc_group *group)
+{
+	sys_slist_append(&ipc_registered_handlers, &group->node);
+}
+
+void ipc_unregister(struct ipc_group *group)
+{
+	(void)sys_slist_find_and_remove(&ipc_registered_handlers, &group->node);
 }
