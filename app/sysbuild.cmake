@@ -45,3 +45,6 @@ if(SB_CONFIG_APP_USE_COMBINED_HEX_FILE)
       ${CMAKE_BINARY_DIR}/combined.hex
   )
 endif()
+
+# Use SHA512 hash when signing
+set(${DEFAULT_IMAGE}_SIGNING_SCRIPT "${APP_DIR}/mcuboot_signing.cmake" CACHE INTERNAL "MCUboot signing script" FORCE)
