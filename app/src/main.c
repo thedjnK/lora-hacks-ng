@@ -5,8 +5,9 @@
  */
 
 #include "ipc_endpoint.h"
+#include "ipc_settings.h"
 #include <zephyr/kernel.h>
-
+#include <zephyr/settings/settings.h>
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_REGISTER(main, 4);
@@ -24,6 +25,12 @@ LOG_ERR("aa1");
 	if (rc != 0) {
 		return 0;
 	}
+
+#ifdef CONFIG_IPC_SETTINGS_SERVER
+	rc = settings_subsys_init();
+	rc = settings_load();
+#endif
+
 
 LOG_ERR("aa2");
 	rc = ipc_wait_for_ready();
