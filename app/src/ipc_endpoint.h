@@ -13,6 +13,7 @@
 enum ipc_opcode {
 	IPC_OPCODE_SETTINGS_SAVE,
 	IPC_OPCODE_SETTINGS_LOAD,
+	IPC_OPCODE_SETTINGS_COMMIT,
 };
 
 typedef int (*ipc_callback_fn)(const uint8_t *message, uint16_t size, void *user_data);

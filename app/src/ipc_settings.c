@@ -39,8 +39,13 @@ struct ipc_setting_load_response_data {
 	uint8_t setting[];
 };
 
+struct ipc_setting_commit_response_data {
+	int rc;
+};
+
 static int ipc_setting_callback_save(const uint8_t *message, uint16_t size, void *user_data);
 static int ipc_setting_callback_load(const uint8_t *message, uint16_t size, void *user_data);
+static int ipc_setting_callback_commit(const uint8_t *message, uint16_t size, void *user_data);
 
 #if defined(CONFIG_IPC_SETTINGS_CLIENT)
 static struct {
@@ -62,6 +67,12 @@ static struct ipc_group ipc_group_load = {
 	.opcode = IPC_OPCODE_SETTINGS_LOAD,
 	.user_data = &ipc_settings_data,
 };
+
+static struct ipc_group ipc_group_commit = {
+	.callback = ipc_setting_callback_commit,
+	.opcode = IPC_OPCODE_SETTINGS_COMMIT,
+	.user_data = &ipc_settings_data,
+};
 #endif
 
 #if defined(CONFIG_IPC_SETTINGS_SERVER)
@@ -73,6 +84,11 @@ static struct ipc_group ipc_group_save = {
 static struct ipc_group ipc_group_load = {
 	.callback = ipc_setting_callback_load,
 	.opcode = IPC_OPCODE_SETTINGS_LOAD,
+};
+
+static struct ipc_group ipc_group_commit = {
+	.callback = ipc_setting_callback_commit,
+	.opcode = IPC_OPCODE_SETTINGS_COMMIT,
 };
 #endif
 
@@ -115,6 +131,19 @@ data->rc = rc;
 
 	return rc;
 }
+
+static int ipc_setting_callback_commit(const uint8_t *message, uint16_t size, void *user_data)
+{
+	int rc;
+	struct ipc_setting_commit_response_data data;
+
+	rc = settings_save();
+data.rc = rc;
+
+	rc = ipc_send_message(IPC_OPCODE_SETTINGS_COMMIT, sizeof(data), (uint8_t *)&data);
+
+	return rc;
+}
 #endif
 
 #if defined(CONFIG_IPC_SETTINGS_CLIENT)
@@ -146,6 +175,18 @@ LOG_HEXDUMP_ERR(data->setting, data->rc, "teh");
 	ipc_settings_data.load_pointer = NULL;
 	ipc_settings_data.load_size = 0;
 LOG_ERR("def: %d", data->rc);
+
+	k_sem_give(&ipc_settings_data.done);
+
+	return 0;
+}
+
+static int ipc_setting_callback_commit(const uint8_t *message, uint16_t size, void *user_data)
+{
+	struct ipc_setting_commit_response_data *data = (struct ipc_setting_commit_response_data *)message;
+
+	ipc_settings_data.rc = data->rc;
+LOG_ERR("qui: %d", data->rc);
 
 	k_sem_give(&ipc_settings_data.done);
 
@@ -220,6 +261,29 @@ finish:
 	k_sem_give(&ipc_settings_data.busy);
 	return rc;
 }
+
+int ipc_setting_commit()
+{
+	int rc;
+
+	rc = k_sem_take(&ipc_settings_data.busy, K_FOREVER);
+	rc = ipc_send_message(IPC_OPCODE_SETTINGS_COMMIT, 0, NULL);
+
+//check length?
+	if (rc < 0) {
+		goto finish;
+	}
+
+	rc = k_sem_take(&ipc_settings_data.done, K_FOREVER);
+
+	if (rc == 0) {
+		rc = ipc_settings_data.rc;
+	}
+
+finish:
+	k_sem_give(&ipc_settings_data.busy);
+	return rc;
+}
 #endif
 
 static int ipc_settings_register(void)
@@ -233,6 +297,7 @@ static int ipc_settings_register(void)
 
 	ipc_register(&ipc_group_save);
 	ipc_register(&ipc_group_load);
+	ipc_register(&ipc_group_commit);
 
 	return 0;
 }

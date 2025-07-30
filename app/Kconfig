@@ -13,6 +13,8 @@ config IPC_SETTINGS_SERVER
 	select SETTINGS
 	imply SETTINGS_RUNTIME
 	imply SETTINGS_ZMS_LL_CACHE
+	select FLASH
+	select FLASH_MAP
 
 config IPC_SETTINGS_CLIENT
 	bool "IPC settings client"
