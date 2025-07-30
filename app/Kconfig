@@ -21,4 +21,19 @@ config IPC_SETTINGS_CLIENT
 	select SETTINGS
 	imply SETTINGS_RUNTIME
 
+if IPC_SETTINGS_CLIENT
+
+choice SETTINGS_BACKEND
+        prompt "Storage back-end"
+        default SETTINGS_IPC
+
+config SETTINGS_IPC
+        bool "IPC"
+        help
+          Use IPC as settings storage backend.
+
+endchoice
+
+endif # IPC_SETTINGS_CLIENT
+
 source "Kconfig.zephyr"

@@ -10,3 +10,7 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(test_app_remote)
 
 target_sources(app PRIVATE ../src/main.c ../src/ipc_endpoint.c ../src/ipc_settings.c)
+
+if(CONFIG_SETTINGS_IPC)
+  target_sources(app PRIVATE ../src/settings_ipc.c)
+endif()
