@@ -1,0 +1,13 @@
+#
+# Copyright (c) 2025, Jamie M.
+#
+# All right reserved. This code is NOT apache or FOSS/copyleft licensed.
+#
+
+config IPC_SETTINGS_SERVER
+	bool "IPC settings server"
+
+config IPC_SETTINGS_CLIENT
+	bool "IPC settings client"
+
+source "Kconfig.zephyr"
