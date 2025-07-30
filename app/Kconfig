@@ -6,6 +6,13 @@
 
 config IPC_SETTINGS_SERVER
 	bool "IPC settings server"
+	imply ZMS
+	imply ZMS_LOOKUP_CACHE
+	imply ZMS_DATA_CRC
+	imply ZMS_NO_DOUBLE_WRITE
+	select SETTINGS
+	imply SETTINGS_RUNTIME
+	imply SETTINGS_ZMS_LL_CACHE
 
 config IPC_SETTINGS_CLIENT
 	bool "IPC settings client"
