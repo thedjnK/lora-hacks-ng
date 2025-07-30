@@ -18,9 +18,10 @@ enum ipc_opcode {
 typedef int (*ipc_callback_fn)(const uint8_t *message, uint16_t size, void *user_data);
 
 struct ipc_group {
-        sys_snode_t node;
-        ipc_callback_fn callback;
-        uint8_t opcode;
+	sys_snode_t node;
+	ipc_callback_fn callback;
+	uint8_t opcode;
+	void *user_data;
 };
 
 /*

@@ -62,7 +62,7 @@ LOG_HEXDUMP_ERR(data, len, "DAT");
 		struct ipc_group *group = CONTAINER_OF(snp, struct ipc_group, node);
 
 		if (group->opcode == values->opcode) {
-			(void)group->callback(&values->data[0], values->size, NULL);
+			(void)group->callback(&values->data[0], values->size, group->user_data);
 			break;
 		}
 	}
