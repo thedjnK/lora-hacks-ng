@@ -8,6 +8,7 @@
 #include <zephyr/types.h>
 #include <zephyr/kernel.h>
 #include <zephyr/init.h>
+#include <zephyr/settings/settings.h>
 #include <zephyr/logging/log.h>
 #include "ipc_endpoint.h"
 
@@ -384,13 +385,28 @@ static int ipc_setting_callback_tree_load(const uint8_t *message, uint16_t size,
 }
 #endif
 
+static int ipc_setting_callback_boot_load_read_value(void *cb_arg, void *data, size_t len)
+{
+	struct ipc_setting_boot_load_data *setting = (struct ipc_setting_boot_load_data *)cb_arg;
+
+	if (len > setting->value_size) {
+		len = setting->value_size;
+	}
+
+	memcpy(data, &setting->setting[setting->name_size], len);
+
+	return len;
+}
+
 static int ipc_setting_callback_boot_load(const uint8_t *message, uint16_t size, void *user_data)
 {
 	int rc;
 	struct ipc_setting_boot_load_data *setting = (struct ipc_setting_boot_load_data *)message;
 
 LOG_ERR("got %d length value for %s", setting->value_size, setting->setting);
-//	rc = settings_runtime_set(setting->setting, &setting->setting[setting->name_size], setting->value_size);
+
+	rc = settings_call_set_handler(setting->setting, setting->value_size,
+				       &ipc_setting_callback_boot_load_read_value, setting, NULL);
 
 	rc = ipc_send_message(IPC_OPCODE_SETTINGS_BOOT_LOAD, 0, NULL);
 

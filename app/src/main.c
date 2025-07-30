@@ -26,11 +26,11 @@ LOG_ERR("aa1");
 		return 0;
 	}
 
-#ifdef CONFIG_IPC_SETTINGS_SERVER
 	rc = settings_subsys_init();
+
+#ifdef CONFIG_IPC_SETTINGS_SERVER
 	rc = settings_load();
 #endif
-
 
 LOG_ERR("aa2");
 	rc = ipc_wait_for_ready();
