@@ -43,6 +43,7 @@ struct ipc_setting_commit_response_data {
 	int rc;
 };
 
+#if 0
 struct ipc_setting_tree_count_response_data {
 	uint16_t count;
 };
@@ -57,6 +58,7 @@ struct ipc_setting_tree_load_response_data {
 	uint8_t *value;
 	uint8_t *value_size;
 };
+#endif
 
 struct ipc_setting_boot_load_data {
 	uint8_t name_size;
@@ -68,8 +70,10 @@ struct ipc_setting_boot_load_data {
 static int ipc_setting_callback_save(const uint8_t *message, uint16_t size, void *user_data);
 static int ipc_setting_callback_load(const uint8_t *message, uint16_t size, void *user_data);
 static int ipc_setting_callback_commit(const uint8_t *message, uint16_t size, void *user_data);
+#if 0
 static int ipc_setting_callback_tree_count(const uint8_t *message, uint16_t size, void *user_data);
 static int ipc_setting_callback_tree_load(const uint8_t *message, uint16_t size, void *user_data);
+#endif
 
 /* Server -> client */
 static int ipc_setting_callback_boot_load(const uint8_t *message, uint16_t size, void *user_data);
@@ -101,6 +105,7 @@ static struct ipc_group ipc_group_commit = {
 	.user_data = &ipc_settings_data,
 };
 
+#if 0
 static struct ipc_group ipc_group_tree_count = {
 	.callback = ipc_setting_callback_tree_count,
 	.opcode = IPC_OPCODE_SETTINGS_TREE_COUNT,
@@ -112,6 +117,7 @@ static struct ipc_group ipc_group_tree_load = {
 	.opcode = IPC_OPCODE_SETTINGS_TREE_LOAD,
 	.user_data = &ipc_settings_data,
 };
+#endif
 
 static struct ipc_group ipc_group_boot_load = {
 	.callback = ipc_setting_callback_boot_load,
@@ -141,6 +147,7 @@ static struct ipc_group ipc_group_commit = {
 	.opcode = IPC_OPCODE_SETTINGS_COMMIT,
 };
 
+#if 0
 static struct ipc_group ipc_group_tree_count = {
 	.callback = ipc_setting_callback_tree_count,
 	.opcode = IPC_OPCODE_SETTINGS_TREE_COUNT,
@@ -150,6 +157,7 @@ static struct ipc_group ipc_group_tree_load = {
 	.callback = ipc_setting_callback_tree_load,
 	.opcode = IPC_OPCODE_SETTINGS_TREE_LOAD,
 };
+#endif
 
 static struct ipc_group ipc_group_boot_load = {
 	.callback = ipc_setting_callback_boot_load,
@@ -209,6 +217,7 @@ data.rc = rc;
 	return rc;
 }
 
+#if 0
 static int setting_count_callback(const char *key, size_t len, settings_read_cb read_cb, void *cb_arg, void *param)
 {
 	uint16_t *entries = (uint16_t *)param;
@@ -256,6 +265,7 @@ data->rc = rc;
 
 	return rc;
 }
+#endif
 
 static int ipc_setting_callback_boot_load(const uint8_t *message, uint16_t size, void *user_data)
 {
@@ -356,6 +366,7 @@ LOG_ERR("qui: %d", data->rc);
 	return 0;
 }
 
+#if 0
 static int ipc_setting_callback_tree_count(const uint8_t *message, uint16_t size, void *user_data)
 {
 	struct ipc_setting_tree_count_response_data *data = (struct ipc_setting_tree_count_response_data *)message;
@@ -371,6 +382,7 @@ LOG_ERR("qui: %d", data->count);
 static int ipc_setting_callback_tree_load(const uint8_t *message, uint16_t size, void *user_data)
 {
 }
+#endif
 
 static int ipc_setting_callback_boot_load(const uint8_t *message, uint16_t size, void *user_data)
 {
@@ -477,6 +489,7 @@ finish:
 	return rc;
 }
 
+#if 0
 int ipc_setting_tree_count(uint16_t *count)
 {
 	int rc;
@@ -556,6 +569,7 @@ finish:
 	return rc;
 }
 #endif
+#endif
 
 static int ipc_settings_register(void)
 {
@@ -569,8 +583,10 @@ static int ipc_settings_register(void)
 	ipc_register(&ipc_group_save);
 	ipc_register(&ipc_group_load);
 	ipc_register(&ipc_group_commit);
+#if 0
 	ipc_register(&ipc_group_tree_count);
 	ipc_register(&ipc_group_tree_load);
+#endif
 	ipc_register(&ipc_group_boot_load);
 
 	return 0;
