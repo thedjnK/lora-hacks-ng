@@ -58,11 +58,21 @@ struct ipc_setting_tree_load_response_data {
 	uint8_t *value_size;
 };
 
+struct ipc_setting_boot_load_data {
+	uint8_t name_size;
+	uint8_t value_size;
+	uint8_t setting[]; //Name, followed by value
+};
+
+/* Client -> server */
 static int ipc_setting_callback_save(const uint8_t *message, uint16_t size, void *user_data);
 static int ipc_setting_callback_load(const uint8_t *message, uint16_t size, void *user_data);
 static int ipc_setting_callback_commit(const uint8_t *message, uint16_t size, void *user_data);
 static int ipc_setting_callback_tree_count(const uint8_t *message, uint16_t size, void *user_data);
 static int ipc_setting_callback_tree_load(const uint8_t *message, uint16_t size, void *user_data);
+
+/* Server -> client */
+static int ipc_setting_callback_boot_load(const uint8_t *message, uint16_t size, void *user_data);
 
 #if defined(CONFIG_IPC_SETTINGS_CLIENT)
 static struct {
@@ -102,9 +112,20 @@ static struct ipc_group ipc_group_tree_load = {
 	.opcode = IPC_OPCODE_SETTINGS_TREE_LOAD,
 	.user_data = &ipc_settings_data,
 };
+
+static struct ipc_group ipc_group_boot_load = {
+	.callback = ipc_setting_callback_boot_load,
+	.opcode = IPC_OPCODE_SETTINGS_BOOT_LOAD,
+};
 #endif
 
 #if defined(CONFIG_IPC_SETTINGS_SERVER)
+static struct {
+	struct k_sem busy;
+	struct k_sem done;
+	int rc;
+} ipc_settings_data;
+
 static struct ipc_group ipc_group_save = {
 	.callback = ipc_setting_callback_save,
 	.opcode = IPC_OPCODE_SETTINGS_SAVE,
@@ -129,10 +150,15 @@ static struct ipc_group ipc_group_tree_load = {
 	.callback = ipc_setting_callback_tree_load,
 	.opcode = IPC_OPCODE_SETTINGS_TREE_LOAD,
 };
+
+static struct ipc_group ipc_group_boot_load = {
+	.callback = ipc_setting_callback_boot_load,
+	.opcode = IPC_OPCODE_SETTINGS_BOOT_LOAD,
+	.user_data = &ipc_settings_data,
+};
 #endif
 
 #if defined(CONFIG_IPC_SETTINGS_SERVER)
-//server side:
 static int ipc_setting_callback_save(const uint8_t *message, uint16_t size, void *user_data)
 {
 	int rc;
@@ -230,10 +256,61 @@ data->rc = rc;
 
 	return rc;
 }
+
+static int ipc_setting_callback_boot_load(const uint8_t *message, uint16_t size, void *user_data)
+{
+	k_sem_give(&ipc_settings_data.done);
+	return 0;
+}
+
+static int ipc_setting_boot_load_loop(const char *name, size_t value_size, settings_read_cb read_cb, void *cb_arg, void *param)
+{
+	int rc;
+	struct ipc_setting_boot_load_data *data;
+	uint8_t *key = (uint8_t *)param;
+	uint8_t key_size = strlen(key) + 1;
+	uint8_t part_size = strlen(name) + 1;
+	uint8_t name_size = key_size + part_size;
+	uint8_t total_size = sizeof(struct ipc_setting_boot_load_data) + name_size + value_size;
+
+	data = (struct ipc_setting_boot_load_data *)malloc(total_size);
+
+	data->name_size = name_size;
+	data->value_size = value_size;
+	memcpy(data->setting, key, key_size);
+	data->setting[(key_size - 1)] = '/';
+	memcpy(&data->setting[key_size], name, part_size);
+	(void)read_cb(cb_arg, &data->setting[name_size], value_size);
+
+LOG_ERR("setting: %s length: %d", name, value_size);
+
+	rc = ipc_send_message(IPC_OPCODE_SETTINGS_BOOT_LOAD, total_size, (uint8_t *)data);
+	free(data);
+
+//check length?
+	if (rc < 0) {
+		goto finish;
+	}
+
+	rc = k_sem_take(&ipc_settings_data.done, K_FOREVER);
+
+finish:
+	return rc;
+}
+
+int ipc_setting_boot_load(uint8_t *key)
+{
+	int rc;
+
+	rc = k_sem_take(&ipc_settings_data.busy, K_FOREVER);
+	rc = settings_load_subtree_direct(key, ipc_setting_boot_load_loop, key);
+	k_sem_give(&ipc_settings_data.busy);
+	return rc;
+}
+
 #endif
 
 #if defined(CONFIG_IPC_SETTINGS_CLIENT)
-//client side:
 static int ipc_setting_callback_save(const uint8_t *message, uint16_t size, void *user_data)
 {
 //get error, give sem
@@ -293,6 +370,19 @@ LOG_ERR("qui: %d", data->count);
 
 static int ipc_setting_callback_tree_load(const uint8_t *message, uint16_t size, void *user_data)
 {
+}
+
+static int ipc_setting_callback_boot_load(const uint8_t *message, uint16_t size, void *user_data)
+{
+	int rc;
+	struct ipc_setting_boot_load_data *setting = (struct ipc_setting_boot_load_data *)message;
+
+LOG_ERR("got %d length value for %s", setting->value_size, setting->setting);
+//	rc = settings_runtime_set(setting->setting, &setting->setting[setting->name_size], setting->value_size);
+
+	rc = ipc_send_message(IPC_OPCODE_SETTINGS_BOOT_LOAD, 0, NULL);
+
+	return rc;
 }
 
 int ipc_setting_save(uint8_t *name, uint8_t *value, uint8_t value_size)
@@ -469,9 +559,9 @@ finish:
 
 static int ipc_settings_register(void)
 {
-#if defined(CONFIG_IPC_SETTINGS_CLIENT)
 	k_sem_init(&ipc_settings_data.busy, 1, 1);
 	k_sem_init(&ipc_settings_data.done, 0, 1);
+#if defined(CONFIG_IPC_SETTINGS_CLIENT)
 	ipc_settings_data.load_pointer = NULL;
 	ipc_settings_data.load_size = 0;
 #endif
@@ -481,6 +571,7 @@ static int ipc_settings_register(void)
 	ipc_register(&ipc_group_commit);
 	ipc_register(&ipc_group_tree_count);
 	ipc_register(&ipc_group_tree_load);
+	ipc_register(&ipc_group_boot_load);
 
 	return 0;
 }
