@@ -18,5 +18,7 @@ config IPC_SETTINGS_SERVER
 
 config IPC_SETTINGS_CLIENT
 	bool "IPC settings client"
+	select SETTINGS
+	imply SETTINGS_RUNTIME
 
 source "Kconfig.zephyr"
