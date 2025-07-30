@@ -12,10 +12,10 @@ ExternalZephyrProject_Add(
   BUILD_ONLY y
 )
 
-set_property(GLOBAL APPEND PROPERTY PM_DOMAINS CPUFLPR)
-set_property(GLOBAL APPEND PROPERTY PM_CPUFLPR_IMAGES remote)
-set_property(GLOBAL PROPERTY DOMAIN_APP_CPUFLPR remote)
-set(CPUFLPR_PM_DOMAIN_DYNAMIC_PARTITION remote CACHE INTERNAL "")
+#set_property(GLOBAL APPEND PROPERTY PM_DOMAINS CPUFLPR)
+#set_property(GLOBAL APPEND PROPERTY PM_CPUFLPR_IMAGES remote)
+#set_property(GLOBAL PROPERTY DOMAIN_APP_CPUFLPR remote)
+#set(CPUFLPR_PM_DOMAIN_DYNAMIC_PARTITION remote CACHE INTERNAL "")
 
 # Add dependency so that the remote image is built/flashed first
 sysbuild_add_dependencies(CONFIGURE ${DEFAULT_IMAGE} remote)
@@ -30,12 +30,14 @@ if(SB_CONFIG_APP_USE_COMBINED_HEX_FILE)
     COMMAND
       ${PYTHON_EXECUTABLE} ${ZEPHYR_BASE}/scripts/build/mergehex.py
       -o ${CMAKE_BINARY_DIR}/combined.hex
-      ${CMAKE_BINARY_DIR}/merged.hex ${CMAKE_BINARY_DIR}/merged_CPUFLPR.hex
+      ${CMAKE_BINARY_DIR}/mcuboot/zephyr/zephyr.hex
+      ${CMAKE_BINARY_DIR}/app/zephyr/zephyr.signed.hex
     DEPENDS
       ${DEFAULT_IMAGE}_extra_byproducts
       remote_extra_byproducts
-      merged_hex
-      merged_CPUFLPR_hex
+      mcuboot
+#      merged_hex
+#      merged_CPUFLPR_hex
   )
 
   add_custom_target(
