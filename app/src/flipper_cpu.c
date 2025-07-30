@@ -16,7 +16,7 @@
 #include <hal/nrf_spu.h>
 #endif
 
-static __aligned(0x1000) __used __attribute__((section("._flpr_code"))) const uint8_t flpr_firmware[] = {
+static __aligned(0x800) __used __attribute__((section("._flpr_code"))) const uint8_t flpr_firmware[] = {
 #include <generated/remote.inc>
 };
 
