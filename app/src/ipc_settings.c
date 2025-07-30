@@ -43,9 +43,26 @@ struct ipc_setting_commit_response_data {
 	int rc;
 };
 
+struct ipc_setting_tree_count_response_data {
+	uint16_t count;
+};
+
+struct ipc_setting_tree_load_data {
+	uint16_t index;
+};
+
+struct ipc_setting_tree_load_response_data {
+	int rc;
+	uint8_t *name;
+	uint8_t *value;
+	uint8_t *value_size;
+};
+
 static int ipc_setting_callback_save(const uint8_t *message, uint16_t size, void *user_data);
 static int ipc_setting_callback_load(const uint8_t *message, uint16_t size, void *user_data);
 static int ipc_setting_callback_commit(const uint8_t *message, uint16_t size, void *user_data);
+static int ipc_setting_callback_tree_count(const uint8_t *message, uint16_t size, void *user_data);
+static int ipc_setting_callback_tree_load(const uint8_t *message, uint16_t size, void *user_data);
 
 #if defined(CONFIG_IPC_SETTINGS_CLIENT)
 static struct {
@@ -73,6 +90,18 @@ static struct ipc_group ipc_group_commit = {
 	.opcode = IPC_OPCODE_SETTINGS_COMMIT,
 	.user_data = &ipc_settings_data,
 };
+
+static struct ipc_group ipc_group_tree_count = {
+	.callback = ipc_setting_callback_tree_count,
+	.opcode = IPC_OPCODE_SETTINGS_TREE_COUNT,
+	.user_data = &ipc_settings_data,
+};
+
+static struct ipc_group ipc_group_tree_load = {
+	.callback = ipc_setting_callback_tree_load,
+	.opcode = IPC_OPCODE_SETTINGS_TREE_LOAD,
+	.user_data = &ipc_settings_data,
+};
 #endif
 
 #if defined(CONFIG_IPC_SETTINGS_SERVER)
@@ -90,8 +119,17 @@ static struct ipc_group ipc_group_commit = {
 	.callback = ipc_setting_callback_commit,
 	.opcode = IPC_OPCODE_SETTINGS_COMMIT,
 };
-#endif
 
+static struct ipc_group ipc_group_tree_count = {
+	.callback = ipc_setting_callback_tree_count,
+	.opcode = IPC_OPCODE_SETTINGS_TREE_COUNT,
+};
+
+static struct ipc_group ipc_group_tree_load = {
+	.callback = ipc_setting_callback_tree_load,
+	.opcode = IPC_OPCODE_SETTINGS_TREE_LOAD,
+};
+#endif
 
 #if defined(CONFIG_IPC_SETTINGS_SERVER)
 //server side:
@@ -144,6 +182,54 @@ data.rc = rc;
 
 	return rc;
 }
+
+static int setting_count_callback(const char *key, size_t len, settings_read_cb read_cb, void *cb_arg, void *param)
+{
+	uint16_t *entries = (uint16_t *)param;
+
+	++*entries;
+}
+
+static int ipc_setting_callback_tree_count(const uint8_t *message, uint16_t size, void *user_data)
+{
+	int rc;
+	uint16_t entries = 0;
+	struct ipc_setting_tree_count_response_data data;
+
+	rc = settings_load_subtree_direct(NULL, setting_count_callback, &entries);
+
+	if (rc < 0) {
+		return rc;
+	}
+
+LOG_ERR("stgs: %d", entries);
+
+	data.count = entries;
+	rc = ipc_send_message(IPC_OPCODE_SETTINGS_TREE_COUNT, sizeof(data), (uint8_t *)&data);
+
+	return rc;
+}
+
+static int ipc_setting_callback_tree_load(const uint8_t *message, uint16_t size, void *user_data)
+{
+	int rc;
+	struct ipc_setting_tree_load_data *setting = (struct ipc_setting_tree_load_data *)message;
+	struct ipc_setting_tree_load_response_data *data;
+
+#if 0
+	rc = settings_runtime_get(setting->name, data->setting, setting->max_value_size);
+
+LOG_ERR("def: %d for %s", rc, setting->name);
+data->rc = rc;
+#endif
+
+	data->value_size = (rc >= 0 ? rc : 0);
+
+	rc = ipc_send_message(IPC_OPCODE_SETTINGS_TREE_LOAD, 16, (uint8_t *)data);
+	free(data);
+
+	return rc;
+}
 #endif
 
 #if defined(CONFIG_IPC_SETTINGS_CLIENT)
@@ -191,6 +277,22 @@ LOG_ERR("qui: %d", data->rc);
 	k_sem_give(&ipc_settings_data.done);
 
 	return 0;
+}
+
+static int ipc_setting_callback_tree_count(const uint8_t *message, uint16_t size, void *user_data)
+{
+	struct ipc_setting_tree_count_response_data *data = (struct ipc_setting_tree_count_response_data *)message;
+
+	ipc_settings_data.rc = data->count;
+LOG_ERR("qui: %d", data->count);
+
+	k_sem_give(&ipc_settings_data.done);
+
+	return 0;
+}
+
+static int ipc_setting_callback_tree_load(const uint8_t *message, uint16_t size, void *user_data)
+{
 }
 
 int ipc_setting_save(uint8_t *name, uint8_t *value, uint8_t value_size)
@@ -284,6 +386,85 @@ finish:
 	k_sem_give(&ipc_settings_data.busy);
 	return rc;
 }
+
+int ipc_setting_tree_count(uint16_t *count)
+{
+	int rc;
+
+	rc = k_sem_take(&ipc_settings_data.busy, K_FOREVER);
+	rc = ipc_send_message(IPC_OPCODE_SETTINGS_TREE_COUNT, 0, NULL);
+
+//check length?
+LOG_ERR("uu1 %d", rc);
+	if (rc < 0) {
+		goto finish;
+	}
+
+	rc = k_sem_take(&ipc_settings_data.done, K_FOREVER);
+
+LOG_ERR("uu2 %d", rc);
+	if (rc == 0) {
+		if (ipc_settings_data.rc < 0) {
+			rc = ipc_settings_data.rc;
+LOG_ERR("uu3 %d", rc);
+		} else {
+			*count = ipc_settings_data.rc;
+LOG_ERR("uu4 %d", *count);
+		}
+	}
+
+finish:
+	k_sem_give(&ipc_settings_data.busy);
+	return rc;
+}
+
+int ipc_setting_tree_load(uint16_t index, uint8_t *name, uint8_t *value, uint8_t *value_size)
+{
+	int rc;
+	struct ipc_setting_tree_load_data data;
+	struct ipc_setting_tree_load_response_data response_data = {
+		.name = name,
+		.value = value,
+		.value_size = value_size,
+	};
+
+#if 0
+	uint8_t *name;
+	uint8_t *value;
+	uint8_t *value_size;
+#endif
+
+	data.index = index;
+
+	rc = k_sem_take(&ipc_settings_data.busy, K_FOREVER);
+
+	ipc_settings_data.load_pointer = &response_data;
+
+	rc = ipc_send_message(IPC_OPCODE_SETTINGS_TREE_LOAD, sizeof(data), (uint8_t *)&data);
+//	free(data);
+
+//check length?
+	if (rc < 0) {
+		goto finish;
+	}
+
+	rc = k_sem_take(&ipc_settings_data.done, K_FOREVER);
+
+	if (rc == 0) {
+		rc = ipc_settings_data.rc;
+	}
+
+finish:
+#if 0
+	if (response_data != NULL) {
+		free(response_data);
+		response_data = NULL;
+	}
+#endif
+
+	k_sem_give(&ipc_settings_data.busy);
+	return rc;
+}
 #endif
 
 static int ipc_settings_register(void)
@@ -298,6 +479,8 @@ static int ipc_settings_register(void)
 	ipc_register(&ipc_group_save);
 	ipc_register(&ipc_group_load);
 	ipc_register(&ipc_group_commit);
+	ipc_register(&ipc_group_tree_count);
+	ipc_register(&ipc_group_tree_load);
 
 	return 0;
 }
