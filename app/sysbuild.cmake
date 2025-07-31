@@ -36,6 +36,8 @@ if(SB_CONFIG_APP_USE_COMBINED_HEX_FILE)
       ${DEFAULT_IMAGE}_extra_byproducts
       remote_extra_byproducts
       mcuboot
+      ${CMAKE_BINARY_DIR}/mcuboot/zephyr/zephyr.hex
+      ${CMAKE_BINARY_DIR}/app/zephyr/zephyr.signed.hex
 #      merged_hex
 #      merged_CPUFLPR_hex
   )
