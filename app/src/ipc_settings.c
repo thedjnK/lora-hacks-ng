@@ -174,7 +174,7 @@ static int ipc_setting_callback_save(const uint8_t *message, uint16_t size, void
 	struct ipc_setting_save_data *setting = (struct ipc_setting_save_data *)message;
 	struct ipc_setting_save_response_data data;
 
-	rc = settings_runtime_set(setting->setting, &setting->setting[setting->name_size], setting->value_size);
+	rc = settings_save_one(setting->setting, &setting->setting[setting->name_size], setting->value_size);
 
 LOG_ERR("abc: %d for %s", rc, setting->setting);
 data.rc = rc;
@@ -282,7 +282,7 @@ static int ipc_setting_boot_load_loop(const char *name, size_t value_size, setti
 	uint8_t key_size = strlen(key) + 1;
 	uint8_t part_size = strlen(name) + 1;
 	uint8_t name_size = key_size + part_size;
-	uint8_t total_size = sizeof(struct ipc_setting_boot_load_data) + name_size + value_size;
+	uint16_t total_size = sizeof(struct ipc_setting_boot_load_data) + name_size + value_size;
 
 	data = (struct ipc_setting_boot_load_data *)malloc(total_size);
 
@@ -418,7 +418,7 @@ int ipc_setting_save(uint8_t *name, uint8_t *value, uint8_t value_size)
 	int rc;
 	struct ipc_setting_save_data *data;
 	uint8_t name_size = strlen(name) + 1;
-	uint8_t total_size = sizeof(struct ipc_setting_save_data) + name_size + value_size;
+	uint16_t total_size = sizeof(struct ipc_setting_save_data) + name_size + value_size;
 
 	rc = k_sem_take(&ipc_settings_data.busy, K_FOREVER);
 
@@ -452,7 +452,7 @@ int ipc_setting_load(uint8_t *name, uint8_t *value, uint8_t max_value_size)
 	int rc;
 	struct ipc_setting_load_data *data;
 	uint8_t name_size = strlen(name) + 1;
-	uint8_t total_size = sizeof(struct ipc_setting_load_data) + name_size;
+	uint16_t total_size = sizeof(struct ipc_setting_load_data) + name_size;
 
 	rc = k_sem_take(&ipc_settings_data.busy, K_FOREVER);
 

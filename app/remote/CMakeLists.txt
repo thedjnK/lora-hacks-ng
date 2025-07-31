@@ -14,3 +14,8 @@ target_sources(app PRIVATE ../src/main.c ../src/ipc_endpoint.c ../src/ipc_settin
 if(CONFIG_SETTINGS_IPC)
   target_sources(app PRIVATE ../src/settings_ipc.c)
 endif()
+
+if(CONFIG_LORAWAN_NVM_IPC_SETTINGS)
+  set(ZEPHYR_CURRENT_LIBRARY loramac-node)
+  zephyr_library_sources(../src/lorawan_nvm_settings.c ../src/lorawan_nvm_settings_setting.c)
+endif()

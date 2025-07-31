@@ -36,4 +36,18 @@ endchoice
 
 endif # IPC_SETTINGS_CLIENT
 
+if LORAWAN
+
+choice LORAWAN_NVM
+        prompt "LoRaWAN NVM backend"
+        default LORAWAN_NVM_IPC_SETTINGS if IPC_SETTINGS_CLIENT
+
+config LORAWAN_NVM_IPC_SETTINGS
+        bool "IPC settings based NVM"
+        depends on IPC_SETTINGS_CLIENT
+
+endchoice
+
+endif # LORAWAN
+
 source "Kconfig.zephyr"

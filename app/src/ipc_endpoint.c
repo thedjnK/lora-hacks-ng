@@ -14,7 +14,7 @@
 LOG_MODULE_REGISTER(ipc_endpoint, 4);
 
 #define IPC_MESSAGE_OVERHEAD (data_payload.data - &data_payload.opcode)
-#define IPC_MESSAGE_DATA_SIZE 64
+#define IPC_MESSAGE_DATA_SIZE 512
 
 struct ipc_payload {
 	uint8_t opcode;
@@ -108,9 +108,9 @@ int ipc_send_message(uint8_t opcode, uint16_t size, const uint8_t *message)
 
 	data_payload.opcode = opcode;
 	data_payload.size = size;
-LOG_HEXDUMP_ERR(message, size, "out");
+//LOG_HEXDUMP_ERR(message, size, "out");
 	memcpy(data_payload.data, message, size);
-LOG_HEXDUMP_ERR(&data_payload, (size + IPC_MESSAGE_OVERHEAD), "out2");
+//LOG_HEXDUMP_ERR(&data_payload, (size + IPC_MESSAGE_OVERHEAD), "out2");
 
 	rc = ipc_service_send(&ipc_endpoint, &data_payload, (size + IPC_MESSAGE_OVERHEAD));
 
