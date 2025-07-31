@@ -39,6 +39,10 @@ LOG_ERR("aa2");
 		return 0;
 	}
 
+#ifdef CONFIG_IPC_SETTINGS_SERVER
+	ipc_setting_boot_load("lorawan");
+#endif
+
 LOG_ERR("aa3");
 	while (1) {
 		k_sleep(K_MSEC(2000));
