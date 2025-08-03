@@ -10,6 +10,11 @@
 #include <zephyr/settings/settings.h>
 #include <zephyr/logging/log.h>
 
+#ifdef CONFIG_IPC_LORAWAN_CRYPTO_SERVER
+#include <psa/crypto.h>
+#include <psa/crypto_extra.h>
+#endif
+
 LOG_MODULE_REGISTER(main, 4);
 
 static uint8_t data[3];
@@ -17,6 +22,7 @@ static uint8_t data[3];
 int main(void)
 {
 	int rc;
+	psa_status_t status;
 	uint8_t up_value = 0;
 
 LOG_ERR("aa1");
@@ -30,6 +36,13 @@ LOG_ERR("aa1");
 
 #ifdef CONFIG_IPC_SETTINGS_SERVER
 	rc = settings_load();
+#endif
+
+#ifdef CONFIG_IPC_LORAWAN_CRYPTO_SERVER
+        status = psa_crypto_init();
+        if (status != PSA_SUCCESS) {
+		LOG_ERR("Crypto init failed: %d", status);
+	}
 #endif
 
 LOG_ERR("aa2");

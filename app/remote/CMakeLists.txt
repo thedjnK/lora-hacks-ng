@@ -30,7 +30,7 @@ if(CONFIG_LORAWAN_NVM_IPC_SETTINGS)
     zephyr_library_sources(
       ${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/peripherals/soft-se/aes.c
       ${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/peripherals/soft-se/cmac.c
-      soft-se-mod.c
+      ../src/soft-se-mod.c
       ${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/peripherals/soft-se/soft-se-hal.c
     )
   endif()
