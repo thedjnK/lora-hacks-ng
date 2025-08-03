@@ -115,8 +115,8 @@ int lorawan_nvm_data_restore(void)
 			&nvm_setting_descriptors[i];
 
 		if (*descr->loaded == true) {
+LOG_ERR("value %s to %p from %p", descr->name, (void *)((char *)mib_req.Param.Contexts + descr->offset), (void *)descr->data);
 			memcpy(((char *)mib_req.Param.Contexts + descr->offset), descr->data, descr->size);
-LOG_ERR("value %s to %p", descr->name, ((char *)mib_req.Param.Contexts + descr->offset));
 LOG_HEXDUMP_ERR(descr->data, descr->size, "data");
 		}
 	}

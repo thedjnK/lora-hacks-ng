@@ -22,20 +22,20 @@ static int lora_nvm_handle_set(const char *name, size_t len, settings_read_cb re
 
 	if (!next) {
 		for (uint32_t i = 0; i < lorawan_nvm_settings_entries; i++) {
-LOG_ERR("names %s vs %s", descr->name, name);
+LOG_ERR("names %s vs %s", descr[i].name, name);
 
-			if (strncmp(descr->name, name, name_len) == 0) {
-				if (len == descr->size) {
-					rc = read_cb(cb_arg, descr->data, len);
+			if (strncmp(descr[i].name, name, name_len) == 0) {
+				if (len == descr[i].size) {
+					rc = read_cb(cb_arg, descr[i].data, len);
 
 					if (rc == len) {
 						rc = 0;
-						*descr->loaded = true;
+						*descr[i].loaded = true;
 					}
 LOG_ERR("set!");
 					return rc;
 				} else {
-LOG_ERR("size diff %d vs %d", len, descr->size);
+LOG_ERR("size diff %d vs %d", len, descr[i].size);
 					return -E2BIG;
 				}
 			}
