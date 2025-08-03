@@ -23,10 +23,15 @@ if(CONFIG_LORAWAN_NVM_IPC_SETTINGS)
   set(ZEPHYR_CURRENT_LIBRARY loramac-node)
   zephyr_library_sources(../src/lorawan_nvm_settings.c ../src/lorawan_nvm_settings_setting.c)
 
-  zephyr_library_sources_ifdef(CONFIG_LORAWAN_BELL_IPC_CRYPTO_CLIENT
-    ${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/peripherals/soft-se/aes.c
-    ${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/peripherals/soft-se/cmac.c
-    soft-se-mod.c
-    ${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/peripherals/soft-se/soft-se-hal.c
-  )
+  if(CONFIG_LORAWAN_BELL_IPC_CRYPTO_CLIENT)
+    zephyr_library_compile_definitions(SOFT_SE)
+    zephyr_library_include_directories(${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/peripherals/soft-se)
+
+    zephyr_library_sources(
+      ${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/peripherals/soft-se/aes.c
+      ${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/peripherals/soft-se/cmac.c
+      soft-se-mod.c
+      ${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/peripherals/soft-se/soft-se-hal.c
+    )
+  endif()
 endif()
