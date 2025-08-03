@@ -11,15 +11,24 @@
 #include <zephyr/sys/slist.h>
 
 enum ipc_opcode {
-	/* Client -> server */
+	/* Settings */
+	/* | Client -> server */
 	IPC_OPCODE_SETTINGS_SAVE,
 	IPC_OPCODE_SETTINGS_LOAD,
 	IPC_OPCODE_SETTINGS_COMMIT,
 	IPC_OPCODE_SETTINGS_TREE_COUNT,
 	IPC_OPCODE_SETTINGS_TREE_LOAD,
 
-	/* Server -> client */
+	/* | Server -> client */
 	IPC_OPCODE_SETTINGS_BOOT_LOAD,
+
+	/* Crypto */
+	/* | Client -> server */
+	IPC_OPCODE_CRYPTO_SET_KEY,
+	IPC_OPCODE_CRYPTO_AES128_ECB_ENCRYPT,
+	IPC_OPCODE_CRYPTO_AES128_CCM_ENCRYPT,
+	IPC_OPCODE_CRYPTO_CMAC_AES128_ENCRYPT,
+	IPC_OPCODE_CRYPTO_CMAC_AES128_VERIFY,
 };
 
 typedef int (*ipc_callback_fn)(const uint8_t *message, uint16_t size, void *user_data);

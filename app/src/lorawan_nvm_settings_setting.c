@@ -16,14 +16,12 @@ static int lora_nvm_handle_set(const char *name, size_t len, settings_read_cb re
 	const char *next;
 	size_t name_len;
 	int rc;
+	const struct lorawan_nvm_setting_descr *descr = lorawan_get_nvm_settings();
 
 	name_len = settings_name_next(name, &next);
 
 	if (!next) {
-		for (uint32_t i = 0; i < ARRAY_SIZE(nvm_setting_descriptors); i++) {
-			const struct lorawan_nvm_setting_descr *descr =
-				&nvm_setting_descriptors[i];
-
+		for (uint32_t i = 0; i < lorawan_nvm_settings_entries; i++) {
 LOG_ERR("names %s vs %s", descr->name, name);
 
 			if (strncmp(descr->name, name, name_len) == 0) {

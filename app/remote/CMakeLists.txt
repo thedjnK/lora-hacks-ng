@@ -15,7 +15,18 @@ if(CONFIG_SETTINGS_IPC)
   target_sources(app PRIVATE ../src/settings_ipc.c)
 endif()
 
+if(CONFIG_IPC_LORAWAN_CRYPTO_CLIENT)
+  target_sources(app PRIVATE ../src/ipc_crypto.c)
+endif()
+
 if(CONFIG_LORAWAN_NVM_IPC_SETTINGS)
   set(ZEPHYR_CURRENT_LIBRARY loramac-node)
   zephyr_library_sources(../src/lorawan_nvm_settings.c ../src/lorawan_nvm_settings_setting.c)
+
+  zephyr_library_sources_ifdef(CONFIG_LORAWAN_BELL_IPC_CRYPTO_CLIENT
+    ${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/peripherals/soft-se/aes.c
+    ${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/peripherals/soft-se/cmac.c
+    soft-se-mod.c
+    ${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/peripherals/soft-se/soft-se-hal.c
+  )
 endif()

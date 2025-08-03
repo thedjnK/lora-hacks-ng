@@ -24,4 +24,8 @@ struct lorawan_nvm_setting_descr {
 	bool *loaded;
 };
 
+extern const uint16_t lorawan_nvm_settings_entries;
+
+const struct lorawan_nvm_setting_descr *lorawan_get_nvm_settings();
+
 #endif /* APP_LORAWAN_NVM_SETTINGS_H */

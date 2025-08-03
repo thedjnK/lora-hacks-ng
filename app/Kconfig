@@ -21,6 +21,9 @@ config IPC_SETTINGS_CLIENT
 	select SETTINGS
 	imply SETTINGS_RUNTIME
 
+config IPC_LORAWAN_CRYPTO_SERVER
+	bool "IPC LoRaWAN crypto server"
+
 if IPC_SETTINGS_CLIENT
 
 choice SETTINGS_BACKEND
@@ -47,6 +50,13 @@ config LORAWAN_NVM_IPC_SETTINGS
         depends on IPC_SETTINGS_CLIENT
 
 endchoice
+
+config IPC_LORAWAN_CRYPTO_CLIENT
+	bool "IPC LoRaWAN crypto client"
+	select LORAWAN_BELL_IPC_CRYPTO_CLIENT
+
+config LORAWAN_BELL_IPC_CRYPTO_CLIENT
+	bool "LoRaWAN IPC secure enclare backend"
 
 endif # LORAWAN
 

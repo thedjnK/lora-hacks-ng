@@ -43,6 +43,8 @@ static const struct lorawan_nvm_setting_descr nvm_setting_descriptors[] = {
 	NVM_SETTING_DESCR(LORAMAC_NVM_NOTIFY_FLAG_REGION_GROUP2, RegionGroup2),
 };
 
+const uint16_t lorawan_nvm_settings_entries = ARRAY_SIZE(nvm_setting_descriptors);
+
 static void lorawan_nvm_save_settings(uint16_t nvm_notify_flag)
 {
 	MibRequestConfirm_t mib_req;
@@ -139,4 +141,9 @@ LOG_HEXDUMP_ERR(descr->data, descr->size, "data");
 
 int lorawan_nvm_init(void)
 {
+}
+
+const struct lorawan_nvm_setting_descr *lorawan_get_nvm_settings()
+{
+	return nvm_setting_descriptors;
 }
