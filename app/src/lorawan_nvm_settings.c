@@ -141,6 +141,7 @@ LOG_HEXDUMP_ERR(descr->data, descr->size, "data");
 
 int lorawan_nvm_init(void)
 {
+	return 0;
 }
 
 const struct lorawan_nvm_setting_descr *lorawan_get_nvm_settings()

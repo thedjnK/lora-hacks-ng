@@ -22,8 +22,11 @@ static uint8_t data[3];
 int main(void)
 {
 	int rc;
-	psa_status_t status;
 	uint8_t up_value = 0;
+
+#ifdef CONFIG_IPC_LORAWAN_CRYPTO_SERVER
+	psa_status_t status;
+#endif
 
 LOG_ERR("aa1");
 	rc = ipc_setup();
@@ -38,13 +41,6 @@ LOG_ERR("aa1");
 	rc = settings_load();
 #endif
 
-#ifdef CONFIG_IPC_LORAWAN_CRYPTO_SERVER
-        status = psa_crypto_init();
-        if (status != PSA_SUCCESS) {
-		LOG_ERR("Crypto init failed: %d", status);
-	}
-#endif
-
 LOG_ERR("aa2");
 	rc = ipc_wait_for_ready();
 
@@ -54,6 +50,13 @@ LOG_ERR("aa2");
 
 #ifdef CONFIG_IPC_SETTINGS_SERVER
 	ipc_setting_boot_load("lorawan");
+#endif
+
+#ifdef CONFIG_IPC_LORAWAN_CRYPTO_SERVER
+	status = psa_crypto_init();
+	if (status != PSA_SUCCESS) {
+		LOG_ERR("Crypto init failed: %d", status);
+	}
 #endif
 
 LOG_ERR("aa3");

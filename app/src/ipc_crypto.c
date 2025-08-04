@@ -10,6 +10,7 @@
 #include <zephyr/init.h>
 #include <zephyr/logging/log.h>
 #include "ipc_endpoint.h"
+#include "ipc_crypto.h"
 
 #if defined(CONFIG_IPC_LORAWAN_CRYPTO_SERVER)
 #elif defined(CONFIG_IPC_LORAWAN_CRYPTO_CLIENT)
@@ -20,9 +21,12 @@
 #include <psa/crypto_extra.h>
 #endif
 
+#define CMAC_AES128_SIZE 16
+
 LOG_MODULE_REGISTER(ipc_crypto, 4);
 
 struct ipc_lorawan_crypto_set_key_data {
+	uint8_t type;
 	uint16_t key_size;
 	uint8_t key[];
 };
@@ -167,6 +171,65 @@ LOG_HEXDUMP_ERR(encrypted_data, data_size, "out");
 	return 0;
 }
 
+static int encrypt_cmac_aes128(psa_key_id_t *key_id, uint8_t *data, uint16_t data_size, uint8_t *cmac, uint16_t cmac_size)
+{
+	uint32_t output_size;
+	psa_status_t status;
+	psa_mac_operation_t operation = PSA_MAC_OPERATION_INIT;
+
+	status = psa_mac_sign_setup(&operation, *key_id, PSA_ALG_CMAC);
+
+	if (status != PSA_SUCCESS) {
+		LOG_ERR("CMAC AES128 setup failed: %d", status);
+		return -EINVAL;
+	}
+
+	status = psa_mac_update(&operation, data, data_size);
+
+	if (status != PSA_SUCCESS) {
+		LOG_ERR("CMAC AES128 update failed: %d", status);
+		return -EINVAL;
+	}
+
+	status = psa_mac_sign_finish(&operation, cmac, cmac_size, &output_size);
+
+	if (status != PSA_SUCCESS) {
+		LOG_ERR("CMAC AES128 finish failed: %d", status);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int verify_cmac_aes128(psa_key_id_t *key_id, uint8_t *data, uint16_t data_size, uint8_t *cmac, uint16_t cmac_size)
+{
+	psa_status_t status;
+	psa_mac_operation_t operation = PSA_MAC_OPERATION_INIT;
+
+	status = psa_mac_verify_setup(&operation, *key_id, PSA_ALG_CMAC);
+
+	if (status != PSA_SUCCESS) {
+		LOG_ERR("CMAC AES128 setup failed: %d", status);
+		return -EINVAL;
+	}
+
+	status = psa_mac_update(&operation, data, data_size);
+
+	if (status != PSA_SUCCESS) {
+		LOG_ERR("CMAC AES128 update failed: %d", status);
+		return -EINVAL;
+	}
+
+	status = psa_mac_verify_finish(&operation, cmac, cmac_size);
+
+	if (status != PSA_SUCCESS) {
+		LOG_ERR("CMAC AES128 verify failed: %d", status);
+		return -EBADMSG;
+	}
+
+	return 0;
+}
+
 //TODO: this function is temporary and needs removing when KMU is used
 static int crypto_cleanup(psa_key_id_t *key_id)
 {
@@ -191,9 +254,18 @@ static int ipc_lorawan_crypto_callback_set_key(const uint8_t *message, uint16_t 
 	psa_status_t status;
 	psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
 
-	psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_ENCRYPT | PSA_KEY_USAGE_DECRYPT);
+	if (setting->type == TYPE_AES128) {
+		psa_set_key_usage_flags(&attributes, (PSA_KEY_USAGE_ENCRYPT | PSA_KEY_USAGE_DECRYPT));
+		psa_set_key_algorithm(&attributes, PSA_ALG_ECB_NO_PADDING);
+	} else if (setting->type == TYPE_CMAC_AES128) {
+		psa_set_key_usage_flags(&attributes, (PSA_KEY_USAGE_VERIFY_HASH | PSA_KEY_USAGE_SIGN_HASH));
+		psa_set_key_algorithm(&attributes, PSA_ALG_CMAC);
+	}
+
+//LOG_HEXDUMP_ERR(setting->key, setting->key_size, "key");
+//LOG_HEXDUMP_ERR(message, size, "key");
+
 	psa_set_key_lifetime(&attributes, PSA_KEY_LIFETIME_VOLATILE);
-	psa_set_key_algorithm(&attributes, PSA_ALG_ECB_NO_PADDING);
 	psa_set_key_type(&attributes, PSA_KEY_TYPE_AES);
 	psa_set_key_bits(&attributes, 128);
 	status = psa_import_key(&attributes, setting->key, setting->key_size, &magic_key_id);
@@ -254,13 +326,24 @@ data.rc = rc;
 static int ipc_lorawan_crypto_callback_cmac_aes128_encrypt(const uint8_t *message, uint16_t size, void *user_data)
 {
 	int rc;
+	int rc_cleanup;
 	struct ipc_lorawan_crypto_aes128_encrypt_data *setting = (struct ipc_lorawan_crypto_aes128_encrypt_data *)message;
-	struct ipc_lorawan_crypto_aes128_encrypt_response_data data;
+	struct ipc_lorawan_crypto_aes128_encrypt_response_data *data;
+	uint16_t total_size = sizeof(struct ipc_lorawan_crypto_aes128_encrypt_response_data) + CMAC_AES128_SIZE;
 
-LOG_ERR("abc2: %d", rc);
-data.rc = rc;
+	data = (struct ipc_lorawan_crypto_aes128_encrypt_response_data *)malloc(total_size);
 
-	rc = ipc_send_message(IPC_OPCODE_CRYPTO_CMAC_AES128_ENCRYPT, sizeof(data), (uint8_t *)&data);
+	rc = encrypt_cmac_aes128(&magic_key_id, setting->data, setting->data_size, data->data, CMAC_AES128_SIZE);
+	data->rc = rc;
+
+	if (rc == 0) {
+		data->data_size = CMAC_AES128_SIZE;
+	}
+
+	rc_cleanup = crypto_cleanup(&magic_key_id);
+LOG_ERR("finish: %d", rc_cleanup);
+
+	rc = ipc_send_message(IPC_OPCODE_CRYPTO_CMAC_AES128_ENCRYPT, total_size, (uint8_t *)data);
 
 	return rc;
 }
@@ -268,11 +351,16 @@ data.rc = rc;
 static int ipc_lorawan_crypto_callback_cmac_aes128_verify(const uint8_t *message, uint16_t size, void *user_data)
 {
 	int rc;
+	int rc_cleanup;
 	struct ipc_lorawan_crypto_cmac_aes128_verify_data *setting = (struct ipc_lorawan_crypto_cmac_aes128_verify_data *)message;
 	struct ipc_lorawan_crypto_cmac_aes128_verify_response_data data;
 
-LOG_ERR("abc3: %d", rc);
-data.rc = rc;
+	rc = verify_cmac_aes128(&magic_key_id, setting->data, setting->data_size, &setting->data[setting->data_size], setting->signature_size);
+	data.rc = rc;
+LOG_ERR("cmac verify: %d", rc);
+
+	rc_cleanup = crypto_cleanup(&magic_key_id);
+LOG_ERR("finish: %d", rc_cleanup);
 
 	rc = ipc_send_message(IPC_OPCODE_CRYPTO_CMAC_AES128_VERIFY, sizeof(data), (uint8_t *)&data);
 
@@ -300,7 +388,7 @@ static int ipc_lorawan_crypto_callback_aes128_ecb_encrypt(const uint8_t *message
 	struct ipc_lorawan_crypto_aes128_encrypt_response_data *data = (struct ipc_lorawan_crypto_aes128_encrypt_response_data *)message;
 
 //check length/null
-LOG_ERR("rc? %d, len? %d, ", data->rc, data->data_size);
+LOG_ERR("rc1? %d, len? %d, ", data->rc, data->data_size);
 //LOG_HEXDUMP_ERR(data->data, data->data_size, "tmp");
 	if (data->rc == 0) {
 //LOG_ERR("move to %p", ipc_lorawan_crypto_data.load_pointer);
@@ -335,8 +423,17 @@ static int ipc_lorawan_crypto_callback_cmac_aes128_encrypt(const uint8_t *messag
 //get error, give sem
 	struct ipc_lorawan_crypto_aes128_encrypt_response_data *data = (struct ipc_lorawan_crypto_aes128_encrypt_response_data *)message;
 
+//check length/null
+LOG_ERR("rc2? %d, len? %d, ", data->rc, data->data_size);
+//LOG_HEXDUMP_ERR(data->data, data->data_size, "tmp");
+	if (data->rc == 0) {
+		memcpy(ipc_lorawan_crypto_data.load_pointer, data->data, data->data_size);
+	}
+
+	ipc_lorawan_crypto_data.load_pointer = NULL;
+	ipc_lorawan_crypto_data.load_size = data->data_size;
 	ipc_lorawan_crypto_data.rc = data->rc;
-LOG_ERR("abc7: %d", data->rc);
+//LOG_ERR("abc5: %d", data->rc);
 
 	k_sem_give(&ipc_lorawan_crypto_data.done);
 
@@ -356,7 +453,7 @@ LOG_ERR("abc8: %d", data->rc);
 	return 0;
 }
 
-int ipc_lorawan_crypto_set_key(uint8_t *key, uint16_t key_size)
+int ipc_lorawan_crypto_set_key(uint8_t *key, uint16_t key_size, uint8_t usage)
 {
 	int rc;
 	struct ipc_lorawan_crypto_set_key_data *data;
@@ -365,6 +462,7 @@ int ipc_lorawan_crypto_set_key(uint8_t *key, uint16_t key_size)
 	rc = k_sem_take(&ipc_lorawan_crypto_data.busy, K_FOREVER);
 
 	data = (struct ipc_lorawan_crypto_set_key_data *)malloc(total_size);
+	data->type = usage;
 	data->key_size = key_size;
 	memcpy(data->key, key, key_size);
 
@@ -404,6 +502,49 @@ int ipc_lorawan_crypto_aes128_ecb_encrypt(uint8_t key_id, uint8_t *data, uint16_
 	ipc_lorawan_crypto_data.load_size = data_size;
 
 	rc = ipc_send_message(IPC_OPCODE_CRYPTO_AES128_ECB_ENCRYPT, total_size, (uint8_t *)internal_data);
+	free(internal_data);
+
+//check length?
+	if (rc < 0) {
+		goto finish;
+	}
+
+	rc = k_sem_take(&ipc_lorawan_crypto_data.done, K_FOREVER);
+
+	if (rc == 0) {
+		rc = ipc_lorawan_crypto_data.rc;
+	}
+
+//LOG_HEXDUMP_ERR(data, data_size, "in");
+//LOG_HEXDUMP_ERR(encrypted_data, data_size, "out");
+
+finish:
+	k_sem_give(&ipc_lorawan_crypto_data.busy);
+	return rc;
+}
+
+int ipc_lorawan_crypto_cmac_aes128_encrypt(uint8_t key_id, uint8_t *data, uint16_t data_size, uint8_t *prior_data, uint16_t prior_data_size, uint8_t *encrypted_data)
+{
+	int rc;
+	struct ipc_lorawan_crypto_aes128_encrypt_data *internal_data;
+	uint16_t total_size = sizeof(struct ipc_lorawan_crypto_aes128_encrypt_data) + data_size + prior_data_size;
+
+	rc = k_sem_take(&ipc_lorawan_crypto_data.busy, K_FOREVER);
+
+	internal_data = (struct ipc_lorawan_crypto_aes128_encrypt_data *)malloc(total_size);
+	internal_data->key_id = key_id;
+	internal_data->data_size = data_size + prior_data_size;
+
+	if (prior_data_size > 0) {
+		memcpy(internal_data->data, prior_data, prior_data_size);
+	}
+
+	memcpy(&internal_data->data[prior_data_size], data, data_size);
+
+	ipc_lorawan_crypto_data.load_pointer = encrypted_data;
+	ipc_lorawan_crypto_data.load_size = data_size;
+
+	rc = ipc_send_message(IPC_OPCODE_CRYPTO_CMAC_AES128_ENCRYPT, total_size, (uint8_t *)internal_data);
 	free(internal_data);
 
 //check length?
